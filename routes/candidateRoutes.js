@@ -50,7 +50,7 @@ router.put('/:candidateId', jwtAuthMiddleware, async (req,res) => {
     }
 
     // Get the candidate id
-    const candidateId = req.params.id;
+    const candidateId = req.params.candidateId;
 
     // get the updation data from the req.body
     const updatedCandidateData = req.body;

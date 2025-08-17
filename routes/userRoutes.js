@@ -58,6 +58,7 @@ router.post('/login', async (req,res) => {
     }
 
     const token = generateToken(payload);
+    console.log(token)
 
     //Return token as response
     return res.json({token});
@@ -78,7 +79,13 @@ router.get('/profile', jwtAuthMiddleware, async (req, res) => {
     const userId = userData.id;
 
     const user = await User.findById(userId);
-    res.status(200).json({user});
+    res.status(200).json({
+      user : user.name,
+      email : user.email,
+      aadharCardNumber : user.aadharCardNumber,
+      mobileNumber : user.mobileNumber,
+      address : user.address,
+    });
   }catch (err){
     console.log(err);
     res.status(500).json({error : 'Internal server error'});
@@ -91,15 +98,15 @@ router.put('/profile/password', jwtAuthMiddleware, async (req,res) => {
   try {
 
     // Get the userId using token
-    const userId = req.user;
+    const userId = req.user.id;
     const {currentPassword, newPassword} = req.body;    // Extraxt the current and new password from req.body
 
     // Find the user by user id
-    const user = await user.findById(userId);
+    const user = await User.findById(userId);
 
     // If user does not exist or old password does not match, return error
     if(!user || !(await user.comparePassword(currentPassword))){
-      return res.status(401).json({error : 'Invalid Aadhar Card Number or password'});
+      return res.status(401).json({error : 'Invalid current password'});
     }
 
     // Update password
