@@ -6,6 +6,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());     // stored in req.body
 app.use(express.urlencoded({ extended: true }));
 
+const userRoutes = require('./routes/VoterRoutes');
+
+app.use('/user', userRoutes);
+
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
