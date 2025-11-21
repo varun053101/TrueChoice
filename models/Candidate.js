@@ -23,11 +23,6 @@ const CandidateSchema = new mongoose.Schema({
     default: null
   },
 
-  approved: {
-    type: Boolean,
-    default: false
-  },
-
   createdAt: {
     type: Date,
     default: Date.now,

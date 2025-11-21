@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { jwtAuthMiddleware, generateToken } = require("../auth/jwt");
-const { requireVoter } = require("../middlewares/roles");
+const { requireVoter } = require("../middlewares/Roles");
 
 const User = require("../models/User");
 const EligibleVoter = require("../models/EligibleVoter");
@@ -154,9 +154,8 @@ router.get(
 
       // get candidates and their basic details
       const candidates = await Candidate.find({
-        electionId,
-        approved: true,
-      }).select("displayName _id");
+        electionId
+      }).select("displayName");
 
       return res.status(200).json({
         election: {

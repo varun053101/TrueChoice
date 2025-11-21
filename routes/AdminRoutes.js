@@ -1,0 +1,281 @@
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+
+const { jwtAuthMiddleware } = require('../auth/jwt');
+const { requireAdmin } = require('../middlewares/Roles');
+const Election = require('../models/Election');
+const Candidate = require("../models/Candidate");
+const Vote = require("../models/Vote");
+
+// Create an election
+router.post('/elections/create', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { title, positionName, description, startTime, endTime } = req.body;
+
+    // Check if EveryThing is Valid
+    if (!title || !positionName || !startTime || !endTime) {
+      return res.status(400).json({ error: 'title, positionName, startTime and endTime are required' });
+    }
+
+    // Create a date object
+    const s = new Date(startTime);
+    const e = new Date(endTime);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+      return res.status(400).json({ error: 'Invalid startTime or endTime' });
+    }
+
+    // If start date is after end date
+    if (s >= e) {
+      return res.status(400).json({ error: 'startTime must be before endTime' });
+    }
+
+    // Create Election Data
+    const election = new Election({
+      title,
+      positionName,
+      description: description || '',
+      status: 'draft',
+      startTime: s,
+      endTime: e,
+      publicResults: false,
+      createdBy: req.user.id
+    });
+
+    // Save Data
+    const saved = await election.save();
+
+    return res.status(201).json({ message: 'Election created', election: saved });
+  } catch (err) {
+    console.error('Create election error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post(
+  '/elections/:electionId/candidates/create',
+  jwtAuthMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const electionId = req.params.electionId;
+      const { displayName, manifesto, photoUrl } = req.body;
+
+      // Must have their Name
+      if (!displayName) {
+        return res.status(400).json({ error: "displayName is required" });
+      }
+
+      // Check if election exists
+      const election = await Election.findById(electionId);
+      if (!election) {
+        return res.status(404).json({ error: "Election not found" });
+      }
+
+      // check election status
+      if (election.status === "closed") {
+        return res.status(400).json({
+          error: "Cannot add candidates. Election is already closed."
+        });
+      }
+
+      if (election.status === "ongoing") {
+        return res.status(400).json({
+          error: "Cannot add candidates after voting has started."
+        });
+      }
+
+      // Create candidate
+      const candidate = new Candidate({
+        electionId,
+        displayName: displayName.trim(),
+        manifesto: manifesto || "",
+        photoUrl: photoUrl || null,
+        createdAt: new Date()
+      });
+
+      const savedCandidate = await candidate.save();
+
+      return res.status(201).json({
+        message: "Candidate created successfully",
+        candidate: savedCandidate
+      });
+    } catch (err) {
+      console.error("Create candidate error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// Start the election
+router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+    const { forceStart } = req.body || {};
+
+    const election = await Election.findById(electionId);
+    if (!election) return res.status(404).json({ error: 'Election not found' });
+
+    // Prevent illegal transitions
+    if (election.status === 'ongoing') {
+      return res.status(400).json({ error: 'Election already ongoing' });
+    }
+    if (election.status === 'closed') {
+      return res.status(400).json({ error: 'Cannot start a closed election' });
+    }
+
+    const now = new Date();
+
+    // Do not start if endTime already passed
+    if (election.endTime && new Date(election.endTime) <= now) {
+      return res.status(400).json({ error: 'Election end time has already passed' });
+    }
+
+    // If election scheduled for future and not forced, block start
+    if (!forceStart && election.startTime && new Date(election.startTime) > now) {
+      return res.status(400).json({
+        error: 'Election is scheduled for future. Use forceStart=true to start early.'
+      });
+    }
+
+    // If forceStarted set startTime to now
+    if (forceStart) {
+      election.startTime = now;
+    }
+
+    election.status = 'ongoing';
+    election.startedAt = now; 
+    const savedElection = await election.save();
+
+    return res.status(200).json({ message: 'Election started', election: savedElection });
+  } catch (err) {
+    console.error('Start election error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// End Election
+
+// Get candidates by specific elections
+router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+
+    // check election exists
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ error: "Election not found" });
+    }
+
+    // get candidates
+    const candidates = await Candidate.find({ electionId });
+
+    return res.status(200).json({
+      election: {
+        id: election._id,
+        title: election.title,
+        positionName: election.positionName,
+        status: election.status
+      },
+      totalCandidates: candidates.length,
+      candidates
+    });
+
+  } catch (err) {
+    console.error("List candidates error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+// Delete Candidate befole election started
+router.delete('/candidates/:candidateId', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+
+    // 1) Find candidate
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
+    // 2)Check election status
+    const election = await Election.findById(candidate.electionId).select('status title');
+    if (!election) {
+      return res.status(404).json({ error: 'Associated election not found' });
+    }
+
+    // Only allow delete while election is in draft
+    if (election.status !== 'draft') {
+      return res.status(400).json({ error: 'Cannot delete candidate after election setup has finished (only allowed in draft status)' });
+    }
+
+    // 3) Prevent deletion if votes exist
+    const voteCount = await Vote.countDocuments({ candidateId: candidate._id });
+    if (voteCount > 0) {
+      return res.status(400).json({ error: `Cannot delete candidate: ${voteCount} vote(s) already recorded` });
+    }
+
+    // 4) Delete candidate
+    await Candidate.deleteOne({ _id: candidate._id });
+
+    return res.status(200).json({ message: 'Candidate deleted successfully', candidateId: candidate._id.toString() });
+  } catch (err) {
+    console.error('Delete candidate error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// List of elections
+
+router.get('/elections', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    //all elections sorted by creation time (newest first)
+    const elections = await Election.find().sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      total: elections.length,
+      elections
+    });
+
+  } catch (err) {
+    console.error('List elections error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+// Specific Election Details
+router.get('/elections/:electionId', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+
+    //load election
+    const election = await Election.findById(electionId).select(
+      'title positionName description status startTime endTime publicResults createdBy createdAt'
+    );
+    if (!election) return res.status(404).json({ error: 'Election not found' });
+
+    //candidates for this election
+    const candidates = await Candidate.find({ electionId }).select('displayName manifesto photoUrl createdAt');
+
+    //quick stats
+    const totalCandidates = candidates.length;
+    const totalVotes = await Vote.countDocuments({ electionId });
+
+    return res.status(200).json({
+      election,
+      stats: {
+        totalCandidates,
+        totalVotes
+      },
+      candidates
+    });
+  } catch (err) {
+    console.error('Get election details error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+module.exports = router;

@@ -1,5 +1,5 @@
 const SystemRoles = require('../models/SystemRoles'); // optional if you want to cross-check
-const requireVoter = function requireVoter(req, res, next) {
+function requireVoter(req, res, next) {
   // req.user is set by jwtAuthMiddleware
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
