@@ -54,8 +54,6 @@ router.post('/elections/create', jwtAuthMiddleware, requireAdmin, async (req, re
   }
 });
 
-
-// Create Candidates
 router.post(
   '/elections/:electionId/candidates/create',
   jwtAuthMiddleware,
@@ -206,6 +204,11 @@ router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, asy
       return res.status(404).json({ error: 'Election not found' });
     }
 
+    // check if already closed
+    if (election.status === 'ongoing') {
+      return res.status(400).json({ error: 'Election Already Started' });
+    }
+
     // Only allow forceStart
     if (!forceStart) {
       return res.status(400).json({
@@ -213,20 +216,20 @@ router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, asy
       });
     }
 
-    // If already closed cannot start
+    // check if already closed
     if (election.status === 'closed') {
       return res.status(400).json({ error: 'Cannot start a closed election' });
     }
 
     const now = new Date();
 
-    // If endTime is already in the past, no point starting
+    // If endTime is already in the past
     if (election.endTime && new Date(election.endTime) <= now) {
       return res.status(400).json({ error: 'Election end time has already passed' });
     }
 
     election.startTime = now;
-    election.startedAt = now;
+    election.startedAt = now; 
     election.status = 'ongoing';
 
     const savedElection = await election.save();
@@ -241,7 +244,7 @@ router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, asy
   }
 });
 
-// Force close  the election 
+// Force close the election
 router.post('/elections/:electionId/close', jwtAuthMiddleware, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.electionId;
@@ -281,7 +284,6 @@ router.post('/elections/:electionId/close', jwtAuthMiddleware, requireAdmin, asy
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 // Get candidates by specific elections
 router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireAdmin, async (req, res) => {
