@@ -35,12 +35,7 @@ const userSchema = new mongoose.Schema({
     enum: ['superadmin', 'admin', 'voter'],
     default: 'voter'
   },
-
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-
+  
   createdAt: {
     type: Date,
     default: Date.now,

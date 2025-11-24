@@ -40,8 +40,7 @@ router.post("/register", async (req, res) => {
       email: normEmail,
       srn: normSrn,
       password,
-      role: "voter",
-      isVerified: false,
+      role: "voter"
     };
 
     const newUser = new User(data);
@@ -183,6 +182,23 @@ router.post(
       const { candidateId } = req.body;
       const voterId = req.user.id;
 
+      const voter = await User.findById(voterId);
+      if (!voter) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // check if this SRN is eligible for this election
+      const eligible = await EligibleVoter.findOne({
+        electionId,
+        srn: voter.srn
+      });
+
+      if (!eligible) {
+        return res.status(403).json({
+          error: "You are not eligible to vote in this election"
+        });
+      }
+
       // chech if candidate is valid
       if (!candidateId) {
         return res.status(400).json({ error: "candidateId is required" });
@@ -212,8 +228,7 @@ router.post(
       // check if candidate belong to the election
       const candidate = await Candidate.findOne({
         _id: candidateId,
-        electionId,
-        approved: true,
+        electionId
       });
 
       if (!candidate) {

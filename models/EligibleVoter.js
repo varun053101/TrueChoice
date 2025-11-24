@@ -1,38 +1,21 @@
 const mongoose = require('mongoose');
 
 const EligibleVoterSchema = new mongoose.Schema({
+  electionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Election',
+    required: true
+  },
+
+  // SRN of the eligible voter 
   srn: {
     type: String,
     required: true,
-    trim: true,
-    uppercase: true
-  },
-
-  email: {
-    type: String,
-    default: null,
-    trim: true,
-    lowercase: true
-  },
-
-  name: {
-    type: String,
-    default: null,
+    uppercase: true,
     trim: true
   },
 
-  note: {
-    type: String,
-    default: null
-  },
-
-  addedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  },
-
-  addedAt: {
+  createdAt: {
     type: Date,
     default: Date.now,
     immutable: true
