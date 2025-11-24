@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const jwtAuthMiddleware = (req,res,next) => {
+const jwtAuthMiddleware = async (req,res,next) => {
 
     // Check the request headers has authorization or not
     const authorization = req.headers.authorization;
@@ -13,12 +14,28 @@ const jwtAuthMiddleware = (req,res,next) => {
 
     try {
         // Verify the JWT Token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-          expiresIn: "7d",
-        });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Attach user info to the request object
-        req.user = decoded;                 // Give any name of your choice like req.EncodedData
+        if (!decoded || !decoded.id) {
+        return res.status(401).json({ error: 'Invalid token payload' });
+        }
+        
+        // load fresh user from DB using decoded.id
+        const user = await User.findById(decoded.id).select('_id fullName email srn role');
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Attach current user info from DB, not from token
+        req.user = {
+            id: user._id.toString(),
+            fullName: user.fullName,
+            email: user.email,
+            srn: user.srn,
+            role: user.role
+        };
+        
         next();
     } catch(err){
         console.log(err);
@@ -30,7 +47,8 @@ const jwtAuthMiddleware = (req,res,next) => {
 
 const generateToken = (userData) => {
     // Generate a new JWT using user data
-    return jwt.sign(userData, process.env.JWT_SECRET);        // Added Expire time
+    const payload = { id: userData._id || userData.id };
+    return jwt.sign(payload, process.env.JWT_SECRET);        // Added Expire time
 }
 
 
