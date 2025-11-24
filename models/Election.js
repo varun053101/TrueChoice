@@ -37,6 +37,16 @@ const ElectionSchema = new mongoose.Schema({
     required: true
   },
 
+  startedAt: {
+    type: Date,
+    default: null
+  },
+
+  closedAt: {
+    type: Date,
+    default: null
+  },
+
   // Public visibility for results after closing
   publicResults: {
     type: Boolean,
