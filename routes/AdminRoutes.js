@@ -7,6 +7,8 @@ const { requireAdmin } = require('../middlewares/Roles');
 const Election = require('../models/Election');
 const Candidate = require("../models/Candidate");
 const Vote = require("../models/Vote");
+const EligibleVoter = require("../models/EligibleVoter")
+const multer = require('multer'); // for file uploads
 
 // Create an election
 router.post('/elections/create', jwtAuthMiddleware, requireAdmin, async (req, res) => {
@@ -107,6 +109,90 @@ router.post(
   }
 );
 
+
+// Upload Eligible Voters List for specific Position
+// Store file in memory (buffer) not on disk
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Upload a CSV file containing SRN for this election.
+router.post(
+  '/elections/:electionId/eligible/upload',
+  jwtAuthMiddleware,
+  requireAdmin,
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const electionId = req.params.electionId;
+
+      // ckeck if election exists
+      const election = await Election.findById(electionId);
+      if (!election) {
+        return res.status(404).json({ error: 'Election not found' });
+      }
+
+      //check if file is uploaded
+      if (!req.file) {
+        return res.status(400).json({ error: 'CSV file is required (field name: file)' });
+      }
+
+      // Convert file buffer to string
+      const content = req.file.buffer.toString('utf-8');
+
+      // Split into lines
+      const lines = content.split(/\r?\n/);
+
+      const srnRegex = /^R\d{2}[A-Za-z]{2}\d{3}$/; // same rule as used before
+
+      const srns = [];
+      for (let line of lines) {
+        const raw = line.trim();
+        if (!raw) continue; // skip if empty 
+
+        const srn = raw.toUpperCase();
+
+        // validate SRN format
+        if (!srnRegex.test(srn)) {
+          // skip invalid lines.
+          console.log('Skipping invalid SRN line:', raw);
+          continue;
+        }
+
+        srns.push(srn);
+      }
+
+      if (srns.length === 0) {
+        return res.status(400).json({ error: 'No valid SRNs found in file' });
+      }
+
+      // Remove duplicates
+      const uniqueSrns = Array.from(new Set(srns));
+
+      // Delete old eligible voters for this election if exists
+      await EligibleVoter.deleteMany({ electionId });
+
+      // 7) Insert new eligible voters
+      const docs = uniqueSrns.map(srn => ({
+        electionId,
+        srn
+      }));
+
+      await EligibleVoter.insertMany(docs);
+
+      return res.status(200).json({
+        message: 'Eligible voters uploaded successfully',
+        totalLines: lines.length,
+        validSrns: srns.length,
+        uniqueSrns: uniqueSrns.length
+      });
+
+    } catch (err) {
+      console.error('Eligible upload error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+);
+
+
 // Start the election
 router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, async (req, res) => {
   try {
@@ -155,6 +241,7 @@ router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, asy
 });
 
 // End Election
+// yet to implement
 
 // Get candidates by specific elections
 router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireAdmin, async (req, res) => {
