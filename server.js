@@ -8,8 +8,12 @@ app.use(express.urlencoded({ extended: true }));
 
 const userRoutes = require('./routes/VoterRoutes');
 const adminRoutes = require('./routes/AdminRoutes');
+const SuperadminRoutes = require('./routes/SuperadminRoutes');
+
+
 app.use('/user', userRoutes);
 app.use('/admin', adminRoutes);
+app.use('/superadmin', SuperadminRoutes);
 
 
 // Global Error Handler
