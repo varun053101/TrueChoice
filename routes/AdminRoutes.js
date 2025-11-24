@@ -54,6 +54,8 @@ router.post('/elections/create', jwtAuthMiddleware, requireAdmin, async (req, re
   }
 });
 
+
+// Create Candidates
 router.post(
   '/elections/:electionId/candidates/create',
   jwtAuthMiddleware,
@@ -193,55 +195,93 @@ router.post(
 );
 
 
-// Start the election
+// Force start the election 
 router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.electionId;
     const { forceStart } = req.body || {};
 
     const election = await Election.findById(electionId);
-    if (!election) return res.status(404).json({ error: 'Election not found' });
-
-    // Prevent illegal transitions
-    if (election.status === 'ongoing') {
-      return res.status(400).json({ error: 'Election already ongoing' });
+    if (!election) {
+      return res.status(404).json({ error: 'Election not found' });
     }
+
+    // Only allow forceStart
+    if (!forceStart) {
+      return res.status(400).json({
+        error: 'Election will start automatically at startTime. Use forceStart=true to start early.'
+      });
+    }
+
+    // If already closed cannot start
     if (election.status === 'closed') {
       return res.status(400).json({ error: 'Cannot start a closed election' });
     }
 
     const now = new Date();
 
-    // Do not start if endTime already passed
+    // If endTime is already in the past, no point starting
     if (election.endTime && new Date(election.endTime) <= now) {
       return res.status(400).json({ error: 'Election end time has already passed' });
     }
 
-    // If election scheduled for future and not forced, block start
-    if (!forceStart && election.startTime && new Date(election.startTime) > now) {
-      return res.status(400).json({
-        error: 'Election is scheduled for future. Use forceStart=true to start early.'
-      });
-    }
-
-    // If forceStarted set startTime to now
-    if (forceStart) {
-      election.startTime = now;
-    }
-
+    election.startTime = now;
+    election.startedAt = now;
     election.status = 'ongoing';
-    election.startedAt = now; 
+
     const savedElection = await election.save();
 
-    return res.status(200).json({ message: 'Election started', election: savedElection });
+    return res.status(200).json({
+      message: 'Election force-started',
+      election: savedElection
+    });
   } catch (err) {
     console.error('Start election error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// End Election
-// yet to implement
+// Force close  the election 
+router.post('/elections/:electionId/close', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+    const { forceClose } = req.body || {};
+
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ error: 'Election not found' });
+    }
+
+    // Only allow forceClose
+    if (!forceClose) {
+      return res.status(400).json({
+        error: 'Election will close automatically at endTime. Use forceClose=true to close early.'
+      });
+    }
+
+    // Already closed
+    if (election.status === 'closed') {
+      return res.status(400).json({ error: 'Election is already closed' });
+    }
+
+    const now = new Date();
+
+    election.endTime = now;
+    election.closedAt = now; 
+    election.status = 'closed';
+
+    const savedElection = await election.save();
+
+    return res.status(200).json({
+      message: 'Election force-closed',
+      election: savedElection
+    });
+  } catch (err) {
+    console.error('Close election error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 // Get candidates by specific elections
 router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireAdmin, async (req, res) => {
