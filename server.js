@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const db = require('./db')
+const { runElectionTimeUpdater } = require('./jobs/electionScheduler');
 
 const PORT = process.env.PORT || 3000;
 app.use(express.json());     // stored in req.body
@@ -25,4 +26,9 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`)
+
+  // run job
+  runElectionTimeUpdater();
+  // run every 10 seconds
+  setInterval(runElectionTimeUpdater, 10 * 1000);
 })
