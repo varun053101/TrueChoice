@@ -406,5 +406,47 @@ router.get('/elections/:electionId', jwtAuthMiddleware, requireAdmin, async (req
   }
 });
 
+// Enables public visibility of results for a closed election
+router.patch('/elections/:electionId/publish-results', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+
+    try {
+      const electionId = req.params.electionId;
+
+      const election = await Election.findById(electionId);
+      if (!election) {
+        return res.status(404).json({ error: 'Election not found' });
+      }
+
+      // Only closed elections can publish results
+      if (election.status !== 'closed') {
+        return res.status(400).json({
+          error: 'Results can only be published after the election is closed'
+        });
+      }
+
+      // If already public no change required
+      if (election.publicResults === true) {
+        return res.status(200).json({
+          message: 'Results are already public',
+          election
+        });
+      }
+
+      // Apply patch update
+      election.publicResults = true;
+      await election.save();
+
+      return res.status(200).json({
+        message: 'Results published successfully',
+        election
+      });
+    } catch (err) {
+      console.error('Publish results error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+);
+
+
 
 module.exports = router;
