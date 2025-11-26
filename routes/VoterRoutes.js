@@ -271,7 +271,7 @@ router.get('/elections/:electionId/results', jwtAuthMiddleware, requireVoter, as
     }
 
     // Only show results when closed or public
-    if (election.status !== "closed" && election.publicResults !== true) {
+    if (election.status !== "closed" || election.publicResults !== true) {
       return res.status(403).json({ error: "Results not available yet" });
     }
 
