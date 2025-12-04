@@ -10,9 +10,10 @@ const Candidate = require("../models/Candidate");
 const Vote = require("../models/Vote");
 const mongoose = require("mongoose");
 const { loginLimiter, registerLimiter } = require('../middlewares/rateLimiter');
+const { validateRegistration, validateLogin } = require('../middlewares/validators');
 
 // To Register
-router.post("/register", registerLimiter, async (req, res) => {
+router.post("/register", registerLimiter, validateRegistration, async (req, res) => {
   try {
     const { fullName, email, srn, password } = req.body;
 
@@ -24,15 +25,6 @@ router.post("/register", registerLimiter, async (req, res) => {
     if (userExist) {
       return res.status(409).json({
         error: "User Already Exists",
-      });
-    }
-
-    // SRN REGEX VALIDATION
-    const srnRegex = /^R\d{2}[A-Za-z]{2}\d{3}$/;
-
-    if (!srnRegex.test(normSrn)) {
-      return res.status(400).json({
-        error: "Invalid SRN format. Example: R12AB345",
       });
     }
 
@@ -59,7 +51,7 @@ router.post("/register", registerLimiter, async (req, res) => {
 });
 
 // For logging in
-router.post("/login", registerLimiter, async (req, res) => {
+router.post("/login", registerLimiter, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.trim().toLowerCase() });
