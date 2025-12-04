@@ -51,7 +51,7 @@ router.post("/register", registerLimiter, validateRegistration, async (req, res)
 });
 
 // For logging in
-router.post("/login", registerLimiter, validateLogin, async (req, res) => {
+router.post("/login", loginLimiter, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.trim().toLowerCase() });
