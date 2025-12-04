@@ -9,9 +9,10 @@ const Election = require("../models/Election");
 const Candidate = require("../models/Candidate");
 const Vote = require("../models/Vote");
 const mongoose = require("mongoose");
+const { loginLimiter, registerLimiter } = require('../middlewares/rateLimiter');
 
 // To Register
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   try {
     const { fullName, email, srn, password } = req.body;
 
@@ -58,7 +59,7 @@ router.post("/register", async (req, res) => {
 });
 
 // For logging in
-router.post("/login", async (req, res) => {
+router.post("/login", registerLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.trim().toLowerCase() });
