@@ -2,7 +2,8 @@ const Election = require('../models/Election');
 
 async function runElectionTimeUpdater() {
   const now = new Date();
-  console.log('runElectionTimeUpdater tick at', now.toISOString());
+  // Added for debugging
+  // console.log('runElectionTimeUpdater tick at', now.toISOString());
 
   try {
     
@@ -23,7 +24,8 @@ async function runElectionTimeUpdater() {
       }
     );
 
-    console.log(`auto-start: matched ${startResult.matchedCount || startResult.n} / modified ${startResult.modifiedCount || startResult.nModified}`);
+    // Added for debugging
+    // console.log(`auto-start: matched ${startResult.matchedCount || startResult.n} / modified ${startResult.modifiedCount || startResult.nModified}`);
 
     // set startedAt = startTime for docs where startedAt is null
     const startedAtResult = await Election.updateMany(
