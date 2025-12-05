@@ -110,18 +110,34 @@ router.put("/profile/resetpassword", jwtAuthMiddleware, async (req, res) => {
   }
 });
 
-// Get Ongoing elections
-router.get("/elections/active", jwtAuthMiddleware, async (req, res) => {
+// Get Ongoing and scheduled elections
+router.get('/elections/active', jwtAuthMiddleware, async (req, res) => {
   try {
-    // Only show elections that are ongoing
-    const elections = await Election.find({ status: "ongoing" });
+    const now = new Date();
 
-    return res.status(200).json({ elections });
+    const elections = await Election.find({
+      status: { $in: ['scheduled', 'ongoing'] },
+      endTime: { $gt: now }
+    }).sort({ startTime: 1 });
+
+    const scheduled = [];
+    const ongoing = [];
+
+    elections.forEach(e => {
+      if (e.status === 'scheduled') scheduled.push(e);
+      if (e.status === 'ongoing') ongoing.push(e);
+    });
+
+    return res.status(200).json({
+      scheduled,
+      ongoing
+    });
   } catch (err) {
-    console.log("Active elections error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error('Active elections error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // Get election details
 router.get(
