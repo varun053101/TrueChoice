@@ -54,6 +54,7 @@ router.post('/elections/create', jwtAuthMiddleware, requireAdmin, async (req, re
   }
 });
 
+// Create candidates
 router.post(
   '/elections/:electionId/candidates/create',
   jwtAuthMiddleware,
@@ -293,6 +294,60 @@ router.post('/elections/:electionId/close', jwtAuthMiddleware, requireAdmin, asy
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Move from draft to scheduled
+router.patch('/elections/:electionId/schedule', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { electionId } = req.params;
+
+    if (!mongoose.isValidObjectId(electionId)) {
+      return res.status(400).json({ error: 'Invalid election ID' });
+    }
+
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ error: 'Election not found' });
+    }
+
+    if (election.status !== 'draft') {
+      return res.status(400).json({
+        error: 'Only draft elections can be moved to scheduled'
+      });
+    }
+
+    const now = new Date();
+
+    if (!election.startTime || !election.endTime) {
+      return res.status(400).json({
+        error: 'Election must have startTime and endTime set before scheduling'
+      });
+    }
+
+    if (election.startTime <= now) {
+      return res.status(400).json({
+        error: 'startTime must be in the future to schedule the election'
+      });
+    }
+
+    if (election.endTime <= election.startTime) {
+      return res.status(400).json({
+        error: 'endTime must be after startTime'
+      });
+    }
+
+    election.status = 'scheduled';
+    const saved = await election.save();
+
+    return res.status(200).json({
+      message: 'Election scheduled successfully',
+      election: saved
+    });
+  } catch (err) {
+    console.error('Schedule election error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 // Get candidates by specific elections
 router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireAdmin, async (req, res) => {
