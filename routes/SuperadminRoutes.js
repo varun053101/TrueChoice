@@ -6,6 +6,23 @@ const { requireSuperadmin } = require("../middlewares/Roles");
 
 const User = require("../models/User");
 
+// Get all users for admin selection
+router.get("/users", jwtAuthMiddleware, requireSuperadmin, async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("_id fullName email srn role createdAt")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      total: users.length,
+      users
+    });
+  } catch (err) {
+    console.error("Get users error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // See Who is the current Admin
 router.get("/admin", jwtAuthMiddleware, requireSuperadmin, async (req, res) => {
   try {
