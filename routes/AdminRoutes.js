@@ -199,43 +199,51 @@ router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, asy
     const electionId = req.params.electionId;
     const { forceStart } = req.body || {};
 
+    if (!forceStart) {
+      return res.status(400).json({
+        error: 'This endpoint only supports forceStart. Send { "forceStart": true } in body.'
+      });
+    }
+
+    if (!mongoose.isValidObjectId(electionId)) {
+      return res.status(400).json({ error: 'Invalid election ID' });
+    }
+
     const election = await Election.findById(electionId);
     if (!election) {
       return res.status(404).json({ error: 'Election not found' });
     }
 
-    // check if already closed
-    if (election.status === 'ongoing') {
-      return res.status(400).json({ error: 'Election Already Started' });
-    }
-
-    // Only allow forceStart
-    if (!forceStart) {
-      return res.status(400).json({
-        error: 'Election will start automatically at startTime. Use forceStart=true to start early.'
-      });
-    }
-
-    // check if already closed
     if (election.status === 'closed') {
       return res.status(400).json({ error: 'Cannot start a closed election' });
     }
 
+    if (election.status === 'ongoing') {
+      return res.status(400).json({ error: 'Election is already ongoing' });
+    }
+
+    if (election.status !== 'scheduled') {
+      return res.status(400).json({
+        error: 'Election must be scheduled before it can be force-started'
+      });
+    }
+
     const now = new Date();
 
-    // If endTime is already in the past
-    if (election.endTime && new Date(election.endTime) <= now) {
-      return res.status(400).json({ error: 'Election end time has already passed' });
+    if (election.endTime && election.endTime <= now) {
+      return res.status(400).json({
+        error: 'Cannot start election because endTime has already passed'
+      });
     }
 
     election.startTime = now;
-    election.startedAt = now; 
+    election.startedAt = now;
     election.status = 'ongoing';
 
     const savedElection = await election.save();
 
     return res.status(200).json({
-      message: 'Election force-started',
+      message: 'Election force-started successfully',
       election: savedElection
     });
   } catch (err) {
@@ -243,6 +251,7 @@ router.post('/elections/:electionId/start', jwtAuthMiddleware, requireAdmin, asy
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // Force close the election
 router.post('/elections/:electionId/close', jwtAuthMiddleware, requireAdmin, async (req, res) => {
