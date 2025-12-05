@@ -522,25 +522,23 @@ router.get('/elections', jwtAuthMiddleware, requireAdmin, async (req, res) => {
 router.get('/elections/:electionId', jwtAuthMiddleware, requireAdmin, async (req, res) => {
   try {
     const electionId = req.params.electionId;
-
     //load election
     const election = await Election.findById(electionId).select(
       'title positionName description status startTime endTime publicResults createdBy createdAt'
     );
     if (!election) return res.status(404).json({ error: 'Election not found' });
-
     //candidates for this election
     const candidates = await Candidate.find({ electionId }).select('displayName manifesto photoUrl createdAt');
-
-    //quick stats
+    //quick stats - including eligible voter count
     const totalCandidates = candidates.length;
     const totalVotes = await Vote.countDocuments({ electionId });
-
+    const eligibleCount = await EligibleVoter.countDocuments({ electionId });
     return res.status(200).json({
       election,
       stats: {
         totalCandidates,
-        totalVotes
+        totalVotes,
+        eligibleCount
       },
       candidates
     });
