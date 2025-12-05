@@ -599,6 +599,52 @@ router.patch('/elections/:electionId/publish-results', jwtAuthMiddleware, requir
   }
 );
 
+// GET /admin/elections/:electionId/results - View results (Admin only)
+router.get('/elections/:electionId/results', requireAdmin, async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+    // 1. Get total votes
+    const totalVotes = await Vote.countDocuments({ electionId });
+    // 2. Aggregate votes per candidate
+    const resultsAgg = await Vote.aggregate([
+      { $match: { electionId: new mongoose.Types.ObjectId(electionId) } },
+      { $group: { _id: "$candidateId", votes: { $sum: 1 } } },
+      { $sort: { votes: -1 } },
+      {
+        $lookup: {
+          from: "candidates", // NOTE: Ensure your collection name is 'candidates'
+          localField: "_id",
+          foreignField: "_id",
+          as: "candidate"
+        }
+      },
+      { $unwind: "$candidate" },
+      {
+        $project: {
+          _id: 0,
+          candidateId: "$_id",
+          displayName: "$candidate.displayName",
+          votes: 1
+        }
+      }
+    ]);
+    // 3. Calculate percentages
+    const results = resultsAgg.map(r => ({
+      candidateId: r.candidateId,
+      displayName: r.displayName,
+      votes: r.votes,
+      percentage: totalVotes ? Number(((r.votes / totalVotes) * 100).toFixed(2)) : 0
+    }));
+    return res.status(200).json({
+      totalVotes,
+      results
+    });
+  } catch (err) {
+    console.log("Admin results error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 
 module.exports = router;
