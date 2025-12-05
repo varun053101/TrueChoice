@@ -348,6 +348,86 @@ router.patch('/elections/:electionId/schedule', jwtAuthMiddleware, requireAdmin,
   }
 });
 
+// Update election details ONLY when status is 'draft'
+router.patch('/elections/:electionId', jwtAuthMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { electionId } = req.params;
+
+    if (!mongoose.isValidObjectId(electionId)) {
+      return res.status(400).json({ error: 'Invalid election ID' });
+    }
+
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ error: 'Election not found' });
+    }
+
+    // Only allow edits when election is in draft
+    if (election.status !== 'draft') {
+      return res.status(400).json({
+        error: 'Election can only be edited while it is in draft state'
+      });
+    }
+
+    const {
+      title,
+      positionName,
+      description,
+      startTime,
+      endTime,
+      publicResults
+    } = req.body;
+
+    // Basic field updates 
+    if (title) election.title = title.trim();
+    if (positionName) election.positionName = positionName.trim();
+    if (typeof description === 'string') election.description = description;
+
+    let s = election.startTime;
+    let e = election.endTime;
+
+    //update startTime
+    if (startTime) {
+      const parsed = new Date(startTime);
+      if (isNaN(parsed.getTime())) {
+        return res.status(400).json({ error: 'Invalid startTime format' });
+      }
+      s = parsed;
+    }
+
+    // update endTime
+    if (endTime) {
+      const parsed = new Date(endTime);
+      if (isNaN(parsed.getTime())) {
+        return res.status(400).json({ error: 'Invalid endTime format' });
+      }
+      e = parsed;
+    }
+
+    // Validate time relation
+    if (s && e && s >= e) {
+      return res.status(400).json({ error: 'startTime must be before endTime' });
+    }
+
+    election.startTime = s;
+    election.endTime = e;
+
+    if (typeof publicResults === 'boolean') {
+      election.publicResults = publicResults;
+    }
+
+    const saved = await election.save();
+
+    return res.status(200).json({
+      message: 'Election updated successfully',
+      election: saved
+    });
+  } catch (err) {
+    console.error('Update election error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 // Get candidates by specific elections
 router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireAdmin, async (req, res) => {
