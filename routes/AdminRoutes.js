@@ -500,17 +500,27 @@ router.delete('/candidates/:candidateId', jwtAuthMiddleware, requireAdmin, async
 });
 
 // List of elections
-
 router.get('/elections', jwtAuthMiddleware, requireAdmin, async (req, res) => {
   try {
     //all elections sorted by creation time (newest first)
     const elections = await Election.find().sort({ createdAt: -1 });
-
+    // Add candidate and eligible voter counts for each election
+    const electionsWithCounts = await Promise.all(
+      elections.map(async (election) => {
+        const candidateCount = await Candidate.countDocuments({ electionId: election._id });
+        const eligibleCount = await EligibleVoter.countDocuments({ electionId: election._id });
+        
+        return {
+          ...election.toObject(),
+          candidateCount,
+          eligibleCount
+        };
+      })
+    );
     return res.status(200).json({
-      total: elections.length,
-      elections
+      total: electionsWithCounts.length,
+      elections: electionsWithCounts
     });
-
   } catch (err) {
     console.error('List elections error:', err);
     return res.status(500).json({ error: 'Internal server error' });
