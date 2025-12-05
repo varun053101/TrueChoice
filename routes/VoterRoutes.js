@@ -171,7 +171,7 @@ router.get(
           positionName: election.positionName,
           status: election.status,
         },
-        candidates: candidates.name,
+        candidates: candidates,
       });
     } catch (err) {
       console.log("Ballot error:", err);
@@ -179,6 +179,27 @@ router.get(
     }
   }
 );
+
+// Get All public elections
+router.get('/elections/all', jwtAuthMiddleware, async (req, res) => {
+  try {
+    const elections = await Election.find({
+      status: { $in: ['scheduled', 'ongoing', 'closed'] }
+    }).sort({ createdAt: -1 });
+
+    // Filter: show closed only if publicResults is true
+    const publicElections = elections.filter(e => 
+      e.status !== 'closed' || e.publicResults === true
+    );
+
+    return res.status(200).json({
+      total: publicElections.length,
+      elections: publicElections
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Casting votes
 router.post(
