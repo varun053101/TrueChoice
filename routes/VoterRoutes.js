@@ -286,6 +286,36 @@ router.post(
   }
 );
 
+// Get candidates by specific elections
+router.get('/elections/:electionId/candidates', jwtAuthMiddleware, requireVoter, async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+
+    // check election exists
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ error: "Election not found" });
+    }
+
+    // get candidates
+    const candidates = await Candidate.find({ electionId });
+
+    return res.status(200).json({
+      election: {
+        id: election._id,
+        title: election.title,
+        positionName: election.positionName,
+        status: election.status
+      },
+      totalCandidates: candidates.length,
+      candidates
+    });
+
+  } catch (err) {
+    console.error("List candidates error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // GET election results
 router.get('/elections/:electionId/results', jwtAuthMiddleware, requireVoter, async (req, res) => {
