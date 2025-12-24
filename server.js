@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express')
 const app = express()
 const db = require('./db')
@@ -6,7 +7,7 @@ const cors = require('cors');
 
 const PORT = process.env.PORT || 3000;
 app.use(cors({
-  origin: ['https://true-choice-gfcp.onrender.com', 'http://localhost:5173', 'http://localhost:8080'],
+  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [],
   credentials: true
 }));
 app.use(express.json());     // stored in req.body
