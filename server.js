@@ -2,8 +2,13 @@ const express = require('express')
 const app = express()
 const db = require('./db')
 const { runElectionTimeUpdater } = require('./jobs/electionScheduler');
+const cors = require('cors');
 
 const PORT = process.env.PORT || 3000;
+app.use(cors({
+  origin: ['https://true-choice-gfcp.onrender.com', 'http://localhost:5173', 'http://localhost:8080'],
+  credentials: true
+}));
 app.use(express.json());     // stored in req.body
 app.use(express.urlencoded({ extended: true }));
 
