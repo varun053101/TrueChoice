@@ -193,6 +193,8 @@ Create a `.env` file in the root directory.
 PORT=3000
 MONGO_URL=mongodb://127.0.0.1:27017/truechoice
 JWT_SECRET=super_secret_jwt_key_here
+REGISTERLIMITER_MAX=10 
+LOGINLIMITER_MAX=5
 ```
 ---
 
