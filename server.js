@@ -5,6 +5,11 @@ const connectDB = require("./config/db");
 const cors = require('cors');
 
 const app = express()
+
+// Use Logger
+const logger = require("./middleware/logger");
+app.use(logger);
+
 // Create Database Connection
 connectDB();
 
@@ -25,6 +30,7 @@ app.use('/user', userRoutes);
 app.use('/admin', adminRoutes);
 app.use('/superadmin', SuperadminRoutes);
 
+// Global Error Handler
 const errorHandler = require("./middlewares/errorHandler");
 app.use(errorHandler);
 
