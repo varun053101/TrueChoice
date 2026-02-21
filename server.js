@@ -1,9 +1,12 @@
 require('dotenv').config();
 const express = require('express')
-const app = express()
-const db = require('./db')
 const { runElectionTimeUpdater } = require('./jobs/electionScheduler');
+const connectDB = require("./config/db");
 const cors = require('cors');
+
+const app = express()
+// Create Database Connection
+connectDB();
 
 const PORT = process.env.PORT || 3000;
 app.use(cors({
