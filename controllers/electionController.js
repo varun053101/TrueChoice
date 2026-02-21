@@ -1,5 +1,7 @@
+const mongoose = require("mongoose");
 const Election = require("../models/Election");
 const Candidate = require("../models/Candidate");
+const Vote = require("../models/Vote");
 
 // Get a list of all ongoing elections
 const getActiveElections = async (req, res) => {
