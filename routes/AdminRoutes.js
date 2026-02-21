@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { jwtAuthMiddleware } = require("../auth/jwt");
-const { requireAdmin } = require("../middlewares/Roles");
+const { jwtAuthMiddleware } = require("../middleware/authMiddleware");
+const { requireAdmin } = require("../middleware/roles");
 const multer = require("multer"); // for file uploads
 
 const {

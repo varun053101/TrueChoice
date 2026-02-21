@@ -1,44 +1,44 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const CandidateSchema = new mongoose.Schema({
   electionId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Election',
-    required: true
+    ref: "Election",
+    required: true,
   },
 
   displayName: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
 
   manifesto: {
     type: String,
-    default: ""
+    default: "",
   },
 
   photoUrl: {
     type: String,
-    default: null
+    default: null,
   },
 
   createdAt: {
     type: Date,
     default: Date.now,
-    immutable: true
+    immutable: true,
   },
 
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Auto-update updatedAt
-CandidateSchema.pre('save', function (next) {
+CandidateSchema.pre("save", function (next) {
   if (!this.isNew) this.updatedAt = new Date();
   next();
 });
 
-module.exports = mongoose.model('Candidate', CandidateSchema);
+module.exports = mongoose.model("Candidate", CandidateSchema);

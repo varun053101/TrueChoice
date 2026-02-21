@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+const mongoose = require("mongoose");
+require("dotenv").config();
 
 // Define the MongoDB connection URL
-const mongoURL = process.env.MONGODB_URL;   // Automatically creats a new database if not already present
+const mongoURL = process.env.MONGODB_URL; // Automatically creats a new database if not already present
 
 const connectDB = async () => {
   try {
@@ -20,6 +20,5 @@ mongoose.connection.on("disconnected", () => {
   console.log("MongoDB disconnected");
 });
 
-
 // Export the database connection
-module.exports = connectDB;            // exporting so that express can use it to interact with the database
+module.exports = connectDB; // exporting so that express can use it to interact with the database

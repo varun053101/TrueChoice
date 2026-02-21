@@ -1,35 +1,35 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const VoteSchema = new mongoose.Schema({
   electionId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Election',
-    required: true
+    ref: "Election",
+    required: true,
   },
 
   positionName: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
 
   candidateId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Candidate',
-    required: true
+    ref: "Candidate",
+    required: true,
   },
 
   voterId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
 
   castAt: {
     type: Date,
     default: Date.now,
-    immutable: true
-  }
+    immutable: true,
+  },
 });
 
-module.exports = mongoose.model('Vote', VoteSchema);
+module.exports = mongoose.model("Vote", VoteSchema);

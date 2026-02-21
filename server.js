@@ -1,44 +1,47 @@
-require('dotenv').config();
-const express = require('express')
-const { runElectionTimeUpdater } = require('./jobs/electionScheduler');
+require("dotenv").config();
+const express = require("express");
+const { runElectionTimeUpdater } = require("./jobs/electionScheduler");
 const connectDB = require("./config/db");
-const cors = require('cors');
+const cors = require("cors");
 
-const app = express()
+const app = express();
 
 // Use Logger
-const logger = require("./middlewares/logger");
+const logger = require("./middleware/logger");
 app.use(logger);
 
 // Create Database Connection
 connectDB();
 
 const PORT = process.env.PORT || 3000;
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [],
-  credentials: true
-}));
-app.use(express.json());     // stored in req.body
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",")
+      : [],
+    credentials: true,
+  }),
+);
+app.use(express.json()); // stored in req.body
 app.use(express.urlencoded({ extended: true }));
 
-const userRoutes = require('./routes/VoterRoutes');
-const adminRoutes = require('./routes/AdminRoutes');
-const SuperadminRoutes = require('./routes/SuperadminRoutes');
+const userRoutes = require("./routes/VoterRoutes");
+const adminRoutes = require("./routes/AdminRoutes");
+const SuperadminRoutes = require("./routes/SuperadminRoutes");
 
-
-app.use('/user', userRoutes);
-app.use('/admin', adminRoutes);
-app.use('/superadmin', SuperadminRoutes);
+app.use("/user", userRoutes);
+app.use("/admin", adminRoutes);
+app.use("/superadmin", SuperadminRoutes);
 
 // Global Error Handler
-const errorHandler = require("./middlewares/errorHandler");
+const errorHandler = require("./middleware/errorHandler");
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`)
+  console.log(`Example app listening on port ${PORT}`);
 
   // run job
   runElectionTimeUpdater();
   // run every 10 seconds
   setInterval(runElectionTimeUpdater, 10 * 1000);
-})
+});

@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { jwtAuthMiddleware } = require("../auth/jwt");
-const { requireVoter } = require("../middlewares/Roles");
+const { jwtAuthMiddleware } = require("../middleware/authMiddleware");
+const { requireVoter } = require("../middleware/roles");
 
-const { loginLimiter, registerLimiter } = require("../middlewares/rateLimiter");
+const { loginLimiter, registerLimiter } = require("../middleware/rateLimiter");
 
 const {
   validateRegistration,
   validateLogin,
-} = require("../middlewares/validators");
+} = require("../middleware/validators");
 
 const {
   registerUser,

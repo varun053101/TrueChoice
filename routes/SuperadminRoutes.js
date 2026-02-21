@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { jwtAuthMiddleware } = require("../auth/jwt");
-const { requireSuperadmin } = require("../middlewares/Roles");
+const { jwtAuthMiddleware } = require("../middleware/authMiddleware");
+const { requireSuperadmin } = require("../middleware/roles");
 
 const {
   getAllUsers,

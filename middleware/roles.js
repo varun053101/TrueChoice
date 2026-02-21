@@ -1,14 +1,14 @@
 function requireVoter(req, res, next) {
   // req.user is set by jwtAuthMiddleware
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.user) return res.status(401).json({ error: "Not authenticated" });
 
   // user.role must be 'voter'
-  if (req.user.role !== 'voter') {
-    return res.status(403).json({ error: 'Voter only' });
+  if (req.user.role !== "voter") {
+    return res.status(403).json({ error: "Voter only" });
   }
 
   next();
-};
+}
 
 function requireAdmin(req, res, next) {
   try {
@@ -24,7 +24,6 @@ function requireAdmin(req, res, next) {
     }
 
     return res.status(403).json({ error: "Admin access required" });
-
   } catch (err) {
     console.error("requireAdmin error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -44,7 +43,6 @@ function requireSuperadmin(req, res, next) {
     }
 
     return res.status(403).json({ error: "Superadmin access required" });
-
   } catch (err) {
     console.error("requireSuperadmin error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -54,5 +52,5 @@ function requireSuperadmin(req, res, next) {
 module.exports = {
   requireVoter,
   requireAdmin,
-  requireSuperadmin
+  requireSuperadmin,
 };

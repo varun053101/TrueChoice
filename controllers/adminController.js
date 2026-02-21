@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
-const Election = require("../models/Election");
-const Candidate = require("../models/Candidate");
-const Vote = require("../models/Vote");
-const EligibleVoter = require("../models/EligibleVoter");
+const Election = require("../models/election");
+const Candidate = require("../models/candidate");
+const Vote = require("../models/vote");
+const EligibleVoter = require("../models/eligibleVoter");
 
 // Create an Election
 const createElection = async (req, res) => {

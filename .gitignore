@@ -1,2 +1,4 @@
 node_modules/
 .env
+# (for personal use)
+improvements.txt

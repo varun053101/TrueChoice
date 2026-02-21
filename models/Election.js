@@ -1,81 +1,81 @@
 // models/Election.js
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const ElectionSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
 
   positionName: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
 
   description: {
     type: String,
-    default: ""
+    default: "",
   },
 
   // draft | scheduled | ongoing | closed
   status: {
     type: String,
-    enum: ['draft', 'scheduled', 'ongoing', 'closed'],
-    default: 'draft'
+    enum: ["draft", "scheduled", "ongoing", "closed"],
+    default: "draft",
   },
 
   // When election can start and end
   startTime: {
     type: Date,
-    required: true
+    required: true,
   },
 
   endTime: {
     type: Date,
-    required: true
+    required: true,
   },
 
   startedAt: {
     type: Date,
-    default: null
+    default: null,
   },
 
   closedAt: {
     type: Date,
-    default: null
+    default: null,
   },
 
   // Public visibility for results after closing
   publicResults: {
     type: Boolean,
-    default: false
+    default: false,
   },
 
   // Admin or Superadmin who created it
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
 
   createdAt: {
     type: Date,
     default: Date.now,
-    immutable: true
+    immutable: true,
   },
 
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Auto update updatedAt
-ElectionSchema.pre('save', function (next) {
+ElectionSchema.pre("save", function (next) {
   if (!this.isNew) this.updatedAt = new Date();
   next();
 });
 
-module.exports = mongoose.model('Election', ElectionSchema);
+module.exports = mongoose.model("Election", ElectionSchema);
