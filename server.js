@@ -25,13 +25,8 @@ app.use('/user', userRoutes);
 app.use('/admin', adminRoutes);
 app.use('/superadmin', SuperadminRoutes);
 
-
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-});
-
+const errorHandler = require("./middlewares/errorHandler");
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`)
