@@ -7,7 +7,7 @@ const cors = require('cors');
 const app = express()
 
 // Use Logger
-const logger = require("./middleware/logger");
+const logger = require("./middlewares/logger");
 app.use(logger);
 
 // Create Database Connection
