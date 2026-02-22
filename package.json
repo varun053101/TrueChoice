@@ -1,7 +1,7 @@
 {
   "name": "voting_app",
   "version": "1.0.0",
-  "description": "",
+  "description": "online voting platform designed for college clubs elections",
   "license": "ISC",
   "author": "",
   "type": "commonjs",
