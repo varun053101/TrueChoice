@@ -25,9 +25,9 @@ app.use(
 app.use(express.json()); // stored in req.body
 app.use(express.urlencoded({ extended: true }));
 
-const userRoutes = require("./routes/VoterRoutes");
-const adminRoutes = require("./routes/AdminRoutes");
-const SuperadminRoutes = require("./routes/SuperadminRoutes");
+const userRoutes = require("./routes/voterRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const SuperadminRoutes = require("./routes/superadminRoutes");
 
 app.use("/user", userRoutes);
 app.use("/admin", adminRoutes);
