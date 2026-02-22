@@ -1,10 +1,13 @@
 const mongoose = require("mongoose");
 const Election = require("../models/election");
 const Candidate = require("../models/candidate");
+const User = require("../models/user");
 const Vote = require("../models/vote");
+const EligibleVoter = require("../models/eligibleVoter");
+const { successResponse, errorResponse } = require("../utils/response");
 
 // Get a list of all ongoing elections
-const getActiveElections = async (req, res) => {
+const getActiveElections = async (req, res, next) => {
   try {
     const now = new Date();
 
@@ -21,30 +24,29 @@ const getActiveElections = async (req, res) => {
       if (e.status === "ongoing") ongoing.push(e);
     });
 
-    return res.status(200).json({
+    return successResponse(res, 200, "Fetched Successfully", {
       scheduled,
       ongoing,
     });
   } catch (err) {
-    console.error("Active elections error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Get election details
-const getElectionBallot = async (req, res) => {
+const getElectionBallot = async (req, res, next) => {
   try {
     const electionId = req.params.electionId;
 
     // Find the election
     const election = await Election.findById(electionId);
     if (!election) {
-      return res.status(404).json({ error: "Election not found" });
+      return errorResponse(res, 404, "Election not found");
     }
 
     //check if election is ongoing
     if (election.status !== "ongoing") {
-      return res.status(400).json({ error: "Election is not open for voting" });
+      return errorResponse(res, 409, "Election is not open for voting");
     }
 
     // get candidates and their basic details
@@ -52,22 +54,23 @@ const getElectionBallot = async (req, res) => {
       electionId,
     }).select("displayName");
 
-    return res.status(200).json({
+    const responseData = {
       election: {
         title: election.title,
         positionName: election.positionName,
         status: election.status,
       },
       candidates: candidates,
-    });
+    };
+
+    return successResponse(res, 200, "Fetched Successfully", responseData);
   } catch (err) {
-    console.log("Ballot error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Get All public elections
-const getAllElections = async (req, res) => {
+const getAllElections = async (req, res, next) => {
   try {
     const elections = await Election.find({
       status: { $in: ["scheduled", "ongoing", "closed"] },
@@ -78,17 +81,19 @@ const getAllElections = async (req, res) => {
       (e) => e.status === "closed" && e.publicResults === true,
     );
 
-    return res.status(200).json({
+    const responseData = {
       total: publicElections.length,
       elections: publicElections,
-    });
+    };
+
+    return successResponse(res, 200, "Fetched Successfully", responseData);
   } catch (err) {
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Cast Vote
-const castVote = async (req, res) => {
+const castVote = async (req, res, next) => {
   try {
     const electionId = req.params.electionId;
     const { candidateId } = req.body;
@@ -96,7 +101,7 @@ const castVote = async (req, res) => {
 
     const voter = await User.findById(voterId);
     if (!voter) {
-      return res.status(404).json({ error: "User not found" });
+      return errorResponse(res, 404, "User Not Found");
     }
 
     // check if this SRN is eligible for this election
@@ -106,35 +111,37 @@ const castVote = async (req, res) => {
     });
 
     if (!eligible) {
-      return res.status(403).json({
-        error: "You are not eligible to vote in this election",
-      });
+      return errorResponse(
+        res,
+        403,
+        "You are not eligible to vote in this election",
+      );
     }
 
     // chech if candidate is valid
     if (!candidateId) {
-      return res.status(400).json({ error: "candidateId is required" });
+      return errorResponse(res, 400, "candidateId is required");
     }
 
     // chech if election is valid
     const election = await Election.findById(electionId);
     if (!election) {
-      return res.status(404).json({ error: "Election not found" });
+      return errorResponse(res, 404, "Election not found");
     }
 
     if (election.status !== "ongoing") {
-      return res
-        .status(400)
-        .json({ error: "Voting is not open for this election" });
+      return errorResponse(
+        res,
+        409,
+        "Voting is not open for this election or closed",
+      );
     }
 
     // rule for only single vote
     const existingVote = await Vote.findOne({ electionId, voterId });
 
     if (existingVote) {
-      return res
-        .status(400)
-        .json({ error: "You have already voted in this election" });
+      return errorResponse(res, 409, "You have already voted in this election");
     }
 
     // check if candidate belong to the election
@@ -144,7 +151,7 @@ const castVote = async (req, res) => {
     });
 
     if (!candidate) {
-      return res.status(400).json({ error: "Invalid candidate" });
+      return errorResponse(res, 400, "Invalid candidate");
     }
 
     // cast vote
@@ -156,19 +163,14 @@ const castVote = async (req, res) => {
     });
 
     const savedVote = await vote.save();
-
-    return res.status(200).json({
-      message: "Vote cast successfully",
-      vote: savedVote,
-    });
+    return successResponse(res, 200, "Vote Casted Successfully", savedVote);
   } catch (err) {
-    console.log("Vote error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Get Election Results
-const getResults = async (req, res) => {
+const getResults = async (req, res, next) => {
   try {
     const electionId = req.params.electionId;
 
@@ -178,21 +180,38 @@ const getResults = async (req, res) => {
     );
 
     if (!election) {
-      return res.status(404).json({ error: "Election not found" });
+      return errorResponse(res, 404, "Election Not Found");
     }
 
     // Only show results when closed or public
-    if (election.status !== "closed" || election.publicResults !== true) {
-      return res.status(403).json({ error: "Results not available yet" });
+    if (election.status !== "closed") {
+      return errorResponse(
+        res,
+        403,
+        "The election is still ongoing. Results will be available after it closes.",
+      );
+    }
+
+    // Only show results when closed or public
+    if (election.publicResults !== true) {
+      return errorResponse(
+        res,
+        403,
+        "Results are currently being verified by the administrator.",
+      );
     }
 
     // Total votes in this election
     const totalVotes = await Vote.countDocuments({ electionId });
 
-    // Aggregate votes per candidate
     const resultsAgg = await Vote.aggregate([
-      { $match: { electionId: new mongoose.Types.ObjectId(electionId) } },
-      { $group: { _id: "$candidateId", votes: { $sum: 1 } } },
+      { $match: { electionId } },
+      {
+        $group: {
+          _id: "$candidateId",
+          votes: { $sum: 1 },
+        },
+      },
       { $sort: { votes: -1 } },
       {
         $lookup: {
@@ -227,7 +246,7 @@ const getResults = async (req, res) => {
     const maxVotes = results.length ? results[0].votes : 0;
     const winners = results.filter((r) => r.votes === maxVotes);
 
-    return res.status(200).json({
+    const responseData = {
       election: {
         id: election._id,
         title: election.title,
@@ -236,28 +255,33 @@ const getResults = async (req, res) => {
       totalVotes,
       results,
       winners,
-    });
+    };
+
+    return successResponse(
+      res,
+      200,
+      "Results Fetched Successfully",
+      responseData,
+    );
   } catch (err) {
-    console.log("Results error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Get Candidate by Election ID
-const getCandidatesByElection = async (req, res) => {
+const getCandidatesByElection = async (req, res, next) => {
   try {
     const electionId = req.params.electionId;
 
     // check election exists
     const election = await Election.findById(electionId);
     if (!election) {
-      return res.status(404).json({ error: "Election not found" });
+      return errorResponse(res, 404, "Election not found");
     }
 
     // get candidates
     const candidates = await Candidate.find({ electionId });
-
-    return res.status(200).json({
+    const responseData = {
       election: {
         id: election._id,
         title: election.title,
@@ -266,10 +290,16 @@ const getCandidatesByElection = async (req, res) => {
       },
       totalCandidates: candidates.length,
       candidates,
-    });
+    };
+
+    return successResponse(
+      res,
+      200,
+      "Candidates Fetched Successfully",
+      responseData,
+    );
   } catch (err) {
-    console.error("List candidates error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 

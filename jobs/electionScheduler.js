@@ -1,6 +1,6 @@
 const Election = require("../models/election");
 
-async function runElectionTimeUpdater() {
+async function runElectionTimeUpdater(next) {
   const now = new Date();
   // Added for debugging
   // console.log('runElectionTimeUpdater tick at', now.toISOString());
@@ -98,7 +98,7 @@ async function runElectionTimeUpdater() {
       }
     }
   } catch (err) {
-    console.error("runElectionTimeUpdater error:", err);
+    return next(err);
   }
 }
 

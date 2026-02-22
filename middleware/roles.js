@@ -1,13 +1,19 @@
+const { successResponse, errorResponse } = require("../utils/response");
+
 function requireVoter(req, res, next) {
-  // req.user is set by jwtAuthMiddleware
-  if (!req.user) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    // req.user is set by jwtAuthMiddleware
+    if (!req.user) return errorResponse(res, 401, "Unauthorized");
 
-  // user.role must be 'voter'
-  if (req.user.role !== "voter") {
-    return res.status(403).json({ error: "Voter only" });
+    // user.role must be 'voter'
+    if (req.user.role === "voter") {
+      return next();
+    }
+
+    return errorResponse(res, 403, "Voter access required");
+  } catch (err) {
+    return next(err);
   }
-
-  next();
 }
 
 function requireAdmin(req, res, next) {
@@ -15,7 +21,7 @@ function requireAdmin(req, res, next) {
     const user = req.user;
 
     if (!user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return errorResponse(res, 401, "Unauthorized");
     }
 
     // Admin or Superadmin can access admin routes
@@ -23,10 +29,9 @@ function requireAdmin(req, res, next) {
       return next();
     }
 
-    return res.status(403).json({ error: "Admin access required" });
+    return errorResponse(res, 403, "Admin access required");
   } catch (err) {
-    console.error("requireAdmin error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 }
 
@@ -35,17 +40,16 @@ function requireSuperadmin(req, res, next) {
     const user = req.user;
 
     if (!user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return errorResponse(res, 401, "Unauthorized");
     }
 
     if (user.role === "superadmin") {
       return next();
     }
 
-    return res.status(403).json({ error: "Superadmin access required" });
+    return errorResponse(res, 403, "Superadmin access required");
   } catch (err) {
-    console.error("requireSuperadmin error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 }
 

@@ -1,8 +1,9 @@
 const User = require("../models/user");
 const { generateToken } = require("../middleware/authMiddleware");
+const { successResponse, errorResponse } = require("../utils/response");
 
 // REGISTER USER
-const registerUser = async (req, res) => {
+const registerUser = async (req, res, next) => {
   try {
     const { fullName, email, srn, password } = req.body;
 
@@ -12,9 +13,7 @@ const registerUser = async (req, res) => {
     const userExist = await User.findOne({ srn: normSrn });
 
     if (userExist) {
-      return res.status(409).json({
-        error: "User Already Exists",
-      });
+      return errorResponse(res, 409, "User Already Exists");
     }
 
     const data = {
@@ -32,49 +31,52 @@ const registerUser = async (req, res) => {
     const payload = { id: response.id, role: response.role };
     const token = generateToken ? generateToken(payload) : null;
 
-    return res.status(200).json({ user: response, token });
+    return successResponse(res, 200, "Registration Successful", {
+      user: response,
+      token,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Registration failed" });
+    return next(err);
   }
 };
 
 // User Login
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return errorResponse(res, 401, "Invalid credentials");
     }
     const token = generateToken({ id: user._id, role: user.role });
-    res.json({
+
+    return successResponse(res, 200, "Login Success", {
       token,
       user: { id: user._id, fullName: user.fullName, role: user.role },
     });
   } catch (err) {
-    res.status(500).json({ error: "Login failed" });
+    return next(err);
   }
 };
 
 // Get the user profile
-const getProfile = async (req, res) => {
+const getProfile = async (req, res, next) => {
   try {
     const userData = req.user;
-
     const user = await User.findById(userData.id);
-    res.status(200).json({
+
+    return successResponse(res, 200, "Successfully Fetched", {
       name: user.fullName,
       email: user.email,
       SRN: user.srn,
     });
   } catch (err) {
-    res.status(500).json({ error: "Internal Server Error" });
+    return next(err);
   }
 };
 
 // Reset password
-const resetPassword = async (req, res) => {
+const resetPassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
     // find the id
@@ -83,8 +85,14 @@ const resetPassword = async (req, res) => {
     // find the user with the id
     const user = await User.findById(userId);
 
+    // Check if current password is correct
     if (!user || !(await user.comparePassword(currentPassword))) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return errorResponse(res, 401, "Wrong current password!");
+    }
+
+    // Check if current and new password are same
+    if(await user.comparePassword(newPassword)) {
+      return errorResponse(res, 400, "New password must be different from the old one");
     }
 
     // Update password
@@ -92,10 +100,9 @@ const resetPassword = async (req, res) => {
     await user.save();
 
     console.log("password updated");
-    res.status(200).json({ message: "Password Updated" });
+    return successResponse(res, 200, "Password Updated", {});
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 

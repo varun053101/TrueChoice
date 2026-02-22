@@ -1,59 +1,48 @@
 const User = require("../models/user");
+const { successResponse, errorResponse } = require("../utils/response");
 
 // Get the list of all the users
-const getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find()
       .select("_id fullName email srn role createdAt")
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({
+    return successResponse(res, 200, "Fetched Successfully", {
       total: users.length,
       users,
     });
   } catch (err) {
-    console.error("Get users error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Get the current admin details
-const getCurrentAdmin = async (req, res) => {
+const getCurrentAdmin = async (req, res, next) => {
   try {
     const admin = await User.findOne({ role: "admin" }).select(
       "_id fullName email srn role createdAt",
     );
-
-    return res.status(200).json({ admin });
+    return successResponse(res, 200, "Fetched Successfully", { admin });
   } catch (err) {
-    console.error("Get admin details error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Make a user as admin
-const makeAdmin = async (req, res) => {
+const makeAdmin = async (req, res, next) => {
   try {
     const userId = req.params.userId;
 
     // Find target user
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return errorResponse(res, 404, "User Not Found");
     }
 
     // check if the user is already admin
     if (user.role === "admin") {
-      return res.status(200).json({
-        message: "User is already admin",
-        admin: {
-          id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          srn: user.srn,
-          role: user.role,
-        },
-      });
+      return errorResponse(res, 409, "Already an admin");
     }
 
     // Demote existing admin
@@ -65,64 +54,55 @@ const makeAdmin = async (req, res) => {
 
     // Promote this user to admin
     user.role = "admin";
-    await user.save();
+    await user.s;
 
-    return res.status(200).json({
-      message: "Admin updated successfully",
-      admin: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        srn: user.srn,
-        role: user.role,
-      },
-    });
+    const responseData = {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      srn: user.srn,
+      role: user.role,
+    };
+
+    return successResponse(
+      res,
+      200,
+      "Admin updated Successfully",
+      responseData,
+    );
   } catch (err) {
-    console.error("make-admin error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 
 // Ownership Transfer
-const transferSuperadmin = async (req, res) => {
+const transferSuperadmin = async (req, res, next) => {
   try {
     const userId = req.params.userId;
 
     // Find target user
     const targetUser = await User.findById(userId);
     if (!targetUser) {
-      return res.status(404).json({ error: "User not found" });
+      return errorResponse(res, 404, "User Not Found");
     }
 
     // If already superadmin, just return
     if (targetUser.role === "superadmin") {
-      return res.status(200).json({
-        message: "User is already superadmin",
-        superadmin: {
-          id: targetUser._id,
-          fullName: targetUser.fullName,
-          email: targetUser.email,
-          srn: targetUser.srn,
-          role: targetUser.role,
-        },
-      });
+      return errorResponse(res, 409, "Already a superadmin");
     }
 
     // cannot transfer ownership to current admin
     if (targetUser.role === "admin") {
-      return res.status(400).json({
-        error:
-          "Cannot transfer superadmin to the current admin. " +
+      return errorResponse(
+        res,
+        403,
+        "Cannot transfer superadmin to the current admin. " +
           "Please assign a different admin or change this user's role first.",
-      });
+      );
     }
 
     //  Find existing superadmin (the caller, usually)
     const existingSuperadmin = await User.findOne({ role: "superadmin" });
-
-    // Promote target to superadmin
-    targetUser.role = "superadmin";
-    await targetUser.save();
 
     // Demote old superadmin to voter (if different user)
     if (
@@ -133,19 +113,19 @@ const transferSuperadmin = async (req, res) => {
       await existingSuperadmin.save();
     }
 
-    return res.status(200).json({
-      message: "Superadmin transferred successfully",
-      superadmin: {
-        id: targetUser._id,
-        fullName: targetUser.fullName,
-        email: targetUser.email,
-        srn: targetUser.srn,
-        role: targetUser.role,
-      },
+    // Promote target to superadmin
+    targetUser.role = "superadmin";
+    await targetUser.save();
+
+    return successResponse(res, 200, "Superadmin Transferred Successfully", {
+      id: targetUser._id,
+      fullName: targetUser.fullName,
+      email: targetUser.email,
+      srn: targetUser.srn,
+      role: targetUser.role,
     });
   } catch (err) {
-    console.error("make-superadmin error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return next(err);
   }
 };
 

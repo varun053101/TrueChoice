@@ -78,7 +78,7 @@ router.patch(
 );
 
 // Update election details ONLY when status is 'draft'
-router.patch(
+router.put(
   "/elections/:electionId",
   jwtAuthMiddleware,
   requireAdmin,
