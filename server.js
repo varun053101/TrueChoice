@@ -27,11 +27,11 @@ app.use(express.urlencoded({ extended: true }));
 
 const userRoutes = require("./routes/voterRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-const SuperadminRoutes = require("./routes/superadminRoutes");
+const superadminRoutes = require("./routes/superadminRoutes");
 
 app.use("/user", userRoutes);
 app.use("/admin", adminRoutes);
-app.use("/superadmin", SuperadminRoutes);
+app.use("/superadmin", superadminRoutes);
 
 // Global Error Handler
 const errorHandler = require("./middleware/errorHandler");
