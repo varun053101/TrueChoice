@@ -5,7 +5,8 @@ const { errorResponse } = require("../utils/response");
 const jwtAuthMiddleware = async (req, res, next) => {
   // Check the request headers has authorization or not
   const authorization = req.headers.authorization;
-  if (!authorization) return errorResponse(res, 401, "Authentication required. Please log in.");
+  if (!authorization)
+    return errorResponse(res, 401, "Authentication required. Please log in.");
 
   // Extract the jwt token fron the request header
   const token = req.headers.authorization.split(" ")[1];
@@ -48,7 +49,7 @@ const jwtAuthMiddleware = async (req, res, next) => {
 const generateToken = (userData) => {
   // Generate a new JWT using user data
   const payload = { id: userData._id || userData.id };
-  return jwt.sign(payload, process.env.JWT_SECRET); // Added Expire time
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2d" }); // Added Expire time
 };
 
 module.exports = { jwtAuthMiddleware, generateToken };
