@@ -1,6 +1,6 @@
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
-const { successResponse, errorResponse } = require("../utils/response");
+const { errorResponse } = require("../utils/response");
 
 const loginLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
