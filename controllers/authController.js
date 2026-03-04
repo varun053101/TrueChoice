@@ -40,7 +40,7 @@ const registerUser = async (req, res, next) => {
       },
     };
 
-    return successResponse(res, 200, "Registration Successful", responseData);
+    return successResponse(res, 201, "Registration Successful", responseData);
   } catch (err) {
     return next(err);
   }
