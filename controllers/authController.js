@@ -30,11 +30,17 @@ const registerUser = async (req, res, next) => {
 
     const payload = { id: response.id, role: response.role };
     const token = generateToken ? generateToken(payload) : null;
-
-    return successResponse(res, 200, "Registration Successful", {
-      user: response,
+    const responseData = {
       token,
-    });
+      user: {
+        id: response._id,
+        fullName: response.fullName,
+        email: response.email,
+        role: response.role,
+      },
+    };
+
+    return successResponse(res, 200, "Registration Successful", responseData);
   } catch (err) {
     return next(err);
   }
@@ -44,16 +50,29 @@ const registerUser = async (req, res, next) => {
 const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+
     const user = await User.findOne({ email: email.trim().toLowerCase() });
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user) {
       return errorResponse(res, 401, "Invalid credentials");
     }
-    const token = generateToken({ id: user._id, role: user.role });
 
-    return successResponse(res, 200, "Login Success", {
+    const isMatching = await user.comparePassword(password);
+    if (!isMatching) {
+      return errorResponse(res, 401, "Invalid credentials");
+    }
+
+    const token = generateToken({ id: user._id, role: user.role });
+    const responseData = {
       token,
-      user: { id: user._id, fullName: user.fullName, role: user.role },
-    });
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    };
+
+    return successResponse(res, 200, "Login Success", responseData);
   } catch (err) {
     return next(err);
   }
@@ -64,11 +83,14 @@ const getProfile = async (req, res, next) => {
   try {
     const userData = req.user;
     const user = await User.findById(userData.id);
-
-    return successResponse(res, 200, "Successfully Fetched", {
+    const responseData = {
       name: user.fullName,
       email: user.email,
       SRN: user.srn,
+    };
+
+    return successResponse(res, 200, "Successfully Fetched", {
+      user: responseData,
     });
   } catch (err) {
     return next(err);
@@ -86,13 +108,18 @@ const resetPassword = async (req, res, next) => {
     const user = await User.findById(userId);
 
     // Check if current password is correct
-    if (!user || !(await user.comparePassword(currentPassword))) {
+    const isMatching = !(await user.comparePassword(currentPassword));
+    if (!user || isMatching) {
       return errorResponse(res, 401, "Wrong current password!");
     }
 
     // Check if current and new password are same
-    if(await user.comparePassword(newPassword)) {
-      return errorResponse(res, 400, "New password must be different from the old one");
+    if (await user.comparePassword(newPassword)) {
+      return errorResponse(
+        res,
+        400,
+        "New password must be different from the old one",
+      );
     }
 
     // Update password

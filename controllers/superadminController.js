@@ -8,9 +8,18 @@ const getAllUsers = async (req, res, next) => {
       .select("_id fullName email srn role createdAt")
       .sort({ createdAt: -1 });
 
+    const responseData = users.map((user) => ({
+      id: user._id,
+      name: user.fullName,
+      email: user.email,
+      srn: user.srn,
+      role: user.role,
+      createdAt: user.createdAt,
+    }));
+
     return successResponse(res, 200, "Fetched Successfully", {
       total: users.length,
-      users,
+      users: responseData,
     });
   } catch (err) {
     return next(err);
@@ -23,7 +32,7 @@ const getCurrentAdmin = async (req, res, next) => {
     const admin = await User.findOne({ role: "admin" }).select(
       "_id fullName email srn role createdAt",
     );
-    return successResponse(res, 200, "Fetched Successfully", { admin });
+    return successResponse(res, 200, "Fetched Successfully", { user: admin });
   } catch (err) {
     return next(err);
   }
@@ -54,7 +63,7 @@ const makeAdmin = async (req, res, next) => {
 
     // Promote this user to admin
     user.role = "admin";
-    await user.s;
+    await user.save();
 
     const responseData = {
       id: user._id,
@@ -64,12 +73,9 @@ const makeAdmin = async (req, res, next) => {
       role: user.role,
     };
 
-    return successResponse(
-      res,
-      200,
-      "Admin updated Successfully",
-      responseData,
-    );
+    return successResponse(res, 200, "Admin updated Successfully", {
+      user: responseData,
+    });
   } catch (err) {
     return next(err);
   }
@@ -117,12 +123,16 @@ const transferSuperadmin = async (req, res, next) => {
     targetUser.role = "superadmin";
     await targetUser.save();
 
-    return successResponse(res, 200, "Superadmin Transferred Successfully", {
+    const responseData = {
       id: targetUser._id,
       fullName: targetUser.fullName,
       email: targetUser.email,
       srn: targetUser.srn,
       role: targetUser.role,
+    };
+
+    return successResponse(res, 200, "Superadmin Transferred Successfully", {
+      user: responseData,
     });
   } catch (err) {
     return next(err);

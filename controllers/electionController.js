@@ -72,21 +72,26 @@ const getElectionBallot = async (req, res, next) => {
 // Get All public elections
 const getAllElections = async (req, res, next) => {
   try {
-    const elections = await Election.find({
-      status: { $in: ["scheduled", "ongoing", "closed"] },
+    const publicElections = await Election.find({
+      status: "closed",
+      publicResults: true,
     }).sort({ createdAt: -1 });
 
-    // Filter: show closed only if publicResults is true
-    const publicElections = elections.filter(
-      (e) => e.status === "closed" && e.publicResults === true,
-    );
+    const responseData = publicElections.map((e) => ({
+      id: e._id,
+      title: e.title,
+      positionName: e.positionName,
+      description: e.description,
+      status: e.status,
+      startedAt: e.startedAt,
+      closedAt: e.closedAt,
+      createdAt: e.createdAt,
+    }));
 
-    const responseData = {
-      total: publicElections.length,
-      elections: publicElections,
-    };
-
-    return successResponse(res, 200, "Fetched Successfully", responseData);
+    return successResponse(res, 200, "Fetched Successfully", {
+      total: responseData.length,
+      elections: responseData,
+    });
   } catch (err) {
     return next(err);
   }
@@ -163,7 +168,19 @@ const castVote = async (req, res, next) => {
     });
 
     const savedVote = await vote.save();
-    return successResponse(res, 200, "Vote Casted Successfully", savedVote);
+
+    const responseData = {
+      id: savedVote._id,
+      electionId: savedVote.electionId,
+      positionName: savedVote.positionName,
+      candidateId: savedVote.candidateId,
+      voterId: savedVote.voterId,
+      castAt: savedVote.castAt,
+    };
+
+    return successResponse(res, 200, "Vote Casted Successfully", {
+      vote: responseData,
+    });
   } catch (err) {
     return next(err);
   }
@@ -289,7 +306,14 @@ const getCandidatesByElection = async (req, res, next) => {
         status: election.status,
       },
       totalCandidates: candidates.length,
-      candidates,
+      candidate: candidates.map((c) => ({
+        id: c._id,
+        electionId: c.electionId,
+        name: c.displayName,
+        manifesto: c.manifesto,
+        photoUrl: c.photoUrl,
+        createdAt: c.createdAt,
+      })),
     };
 
     return successResponse(

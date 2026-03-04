@@ -10,15 +10,6 @@ const createElection = async (req, res, next) => {
   try {
     const { title, positionName, description, startTime, endTime } = req.body;
 
-    // Check if EveryThing is Valid
-    if (!title || !positionName || !startTime || !endTime) {
-      return errorResponse(
-        res,
-        400,
-        "title, positionName, startTime and endTime are required",
-      );
-    }
-
     // Create a date object
     const s = new Date(startTime);
     const e = new Date(endTime);
@@ -40,10 +31,10 @@ const createElection = async (req, res, next) => {
     }
 
     // Create Election Data
-    const election = new Election({
+    const newElection = new Election({
       title,
       positionName,
-      description: description || "",
+      description,
       status: "draft",
       startTime: s,
       endTime: e,
@@ -52,7 +43,19 @@ const createElection = async (req, res, next) => {
     });
 
     // Save Data
-    const responseData = await election.save();
+    const election = await newElection.save();
+    const responseData = {
+      id: election._id,
+      title: election.title,
+      positionName: election.positionName,
+      description: election.description,
+      status: election.status,
+      startTime: election.startTime,
+      endTime: election.endTime,
+      createdAt: election.createdAt,
+      updatedAt: null,
+    };
+
     return successResponse(res, 201, "Election created", {
       election: responseData,
     });
@@ -101,8 +104,8 @@ const updateElection = async (req, res, next) => {
     if (positionName) election.positionName = positionName.trim();
     if (typeof description === "string") election.description = description;
 
-    const s = election.startTime;
-    const e = election.endTime;
+    let s = election.startTime;
+    let e = election.endTime;
     const now = new Date();
 
     //update startTime
@@ -137,7 +140,18 @@ const updateElection = async (req, res, next) => {
     election.startTime = s;
     election.endTime = e;
 
-    const responseData = await election.save();
+    const updatedElection = await election.save();
+    const responseData = {
+      id: updatedElection._id,
+      title: updatedElection.title,
+      positionName: updatedElection.positionName,
+      description: updatedElection.description,
+      status: updatedElection.status,
+      updatedStartTime: updatedElection.startTime,
+      updatedEndTime: updatedElection.endTime,
+      createdAt: updatedElection.createdAt,
+      updatedAt: updatedElection.updatedAt,
+    };
 
     return successResponse(res, 200, "Election updated successfully", {
       election: responseData,
@@ -169,8 +183,6 @@ const scheduleElection = async (req, res, next) => {
       );
     }
 
-    const now = new Date();
-
     if (!election.startTime || !election.endTime) {
       return errorResponse(
         res,
@@ -179,6 +191,7 @@ const scheduleElection = async (req, res, next) => {
       );
     }
 
+    const now = new Date();
     if (election.startTime <= now) {
       return errorResponse(
         res,
@@ -192,7 +205,12 @@ const scheduleElection = async (req, res, next) => {
     }
 
     election.status = "scheduled";
-    const responseData = await election.save();
+    const updatedElection = await election.save();
+    const responseData = {
+      id: updatedElection._id,
+      updatedStatus: updatedElection.status,
+      updatedAt: updatedElection.updatedAt,
+    };
 
     return successResponse(res, 200, "Election scheduled successfully", {
       election: responseData,
@@ -230,10 +248,6 @@ const startElection = async (req, res, next) => {
     }
 
     if (election.status === "ongoing") {
-      return errorResponse(res, 409, "Election is already ongoing");
-    }
-
-    if (election.status !== "scheduled") {
       return errorResponse(
         res,
         409,
@@ -242,20 +256,19 @@ const startElection = async (req, res, next) => {
     }
 
     const now = new Date();
-
-    if (election.endTime && election.endTime <= now) {
-      return errorResponse(
-        res,
-        422,
-        "Cannot start election because endTime has already passed",
-      );
-    }
-
     election.startTime = now;
     election.startedAt = now;
     election.status = "ongoing";
 
-    const responseData = await election.save();
+    const updatedElection = await election.save();
+    const responseData = {
+      id: updatedElection._id,
+      status: updatedElection.status,
+      startTime: updatedElection.startTime,
+      endTime: updatedElection.endTime,
+      startedAt: updatedElection.startedAt,
+    };
+
     return successResponse(res, 200, "Election force-started successfully", {
       election: responseData,
     });
@@ -295,7 +308,14 @@ const closeElection = async (req, res, next) => {
     election.closedAt = now;
     election.status = "closed";
 
-    const responseData = await election.save();
+    const updatedElection = await election.save();
+    const responseData = {
+      id: updatedElection._id,
+      status: updatedElection.status,
+      startTime: updatedElection.startTime,
+      endTime: updatedElection.endTime,
+      closedAt: updatedElection.closedAt,
+    };
 
     return successResponse(res, 200, "Election force-closed", {
       election: responseData,
@@ -333,7 +353,7 @@ const publishResults = async (req, res, next) => {
     election.publicResults = true;
     await election.save();
 
-    return successResponse(res, 201, "Results published successfully", {});
+    return successResponse(res, 200, "Results published successfully", {});
   } catch (err) {
     return next(err);
   }
@@ -381,7 +401,15 @@ const createCandidate = async (req, res, next) => {
       photoUrl: photoUrl || null,
     });
 
-    const responseData = await candidate.save();
+    const newCandidate = await candidate.save();
+    const responseData = {
+      id: newCandidate._id,
+      electionId: newCandidate.electionId,
+      name: newCandidate.displayName,
+      manifesto: newCandidate.manifesto,
+      photoUrl: newCandidate.photoUrl,
+      createdAt: newCandidate.createdAt,
+    };
     return successResponse(res, 201, "Candidate created successfully", {
       candidate: responseData,
     });
@@ -434,8 +462,12 @@ const deleteCandidate = async (req, res, next) => {
 
     // 4) Delete candidate
     await Candidate.deleteOne({ _id: candidate._id });
+    const responseData = {
+      id: candidate._id,
+    };
+
     return successResponse(res, 200, "Candidate deleted successfully", {
-      candidateId: candidate._id.toString(),
+      candidate: responseData,
     });
   } catch (err) {
     return next(err);
@@ -554,7 +586,7 @@ const listElections = async (req, res, next) => {
 
     return successResponse(res, 200, "Elections fetched successfully", {
       total: electionsWithCounts.length,
-      elections: electionsWithCounts,
+      election: electionsWithCounts,
     });
   } catch (err) {
     return next(err);
@@ -566,7 +598,7 @@ const getElectionDetails = async (req, res, next) => {
   try {
     const electionId = req.params.electionId;
 
-    if (!mongoose.Object.isValidObjectId(electionId)) {
+    if (!mongoose.Types.ObjectId.isValid(electionId)) {
       return errorResponse(res, 400, "Invalid Election id");
     }
 
@@ -589,15 +621,39 @@ const getElectionDetails = async (req, res, next) => {
     const totalVotes = await Vote.countDocuments({ electionId });
     const eligibleCount = await EligibleVoter.countDocuments({ electionId });
 
-    return successResponse(res, 200, "Fetched Election Details Successfully", {
-      election,
+    const responseData = {
+      election: {
+        id: election._id,
+        title: election.title,
+        positionName: election.positionName,
+        status: election.status,
+        startTime: election.startTime,
+        endTime: election.endTime,
+        startedAt: election.startedAt,
+        closedAt: election.closedAt,
+        publishResults: election.publicResults,
+      },
+
       stats: {
         totalCandidates,
         totalVotes,
         eligibleCount,
       },
-      candidates,
-    });
+
+      candidate: {
+        name: candidates.displayName,
+        manifesto: candidates.manifesto,
+        photoUrl: candidates.photoUrl,
+        createdAt: candidates.createdAt,
+      },
+    };
+
+    return successResponse(
+      res,
+      200,
+      "Fetched Election Details Successfully",
+      responseData,
+    );
   } catch (err) {
     return next(err);
   }
