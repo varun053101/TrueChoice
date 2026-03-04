@@ -134,12 +134,10 @@ const castVote = async (req, res, next) => {
       return errorResponse(res, 404, "Election not found");
     }
 
-    if (election.status !== "ongoing") {
-      return errorResponse(
-        res,
-        409,
-        "Voting is not open for this election or closed",
-      );
+    const now = new Date();
+
+    if (election.status !== "ongoing" || election.endTime <= now) {
+      return errorResponse(res, 409, "Voting is closed");
     }
 
     // rule for only single vote
@@ -182,6 +180,9 @@ const castVote = async (req, res, next) => {
       vote: responseData,
     });
   } catch (err) {
+    if (err.code === 11000) {
+      return errorResponse(res, 409, "You have already voted");
+    }
     return next(err);
   }
 };
