@@ -4,6 +4,7 @@ const router = express.Router();
 const { jwtAuthMiddleware } = require("../middleware/authMiddleware");
 const { requireAdmin } = require("../middleware/roles");
 const multer = require("multer"); // for file uploads
+const { validateElectionDetails } = require("../middleware/validators");
 
 const {
   createElection,
@@ -29,6 +30,7 @@ router.post(
   "/elections/create",
   jwtAuthMiddleware,
   requireAdmin,
+  validateElectionDetails,
   createElection,
 );
 
