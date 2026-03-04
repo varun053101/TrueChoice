@@ -33,4 +33,22 @@ const validateLogin = [
   },
 ];
 
-module.exports = { validateRegistration, validateLogin };
+const validateElectionDetails = [
+  body("title").notEmpty().withMessage("Title is required"),
+  body("positionName").notEmpty().withMessage("Position name is required"),
+  body("description").notEmpty().withMessage("Description is required"),
+
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 400, errors.array()[0].msg);
+    }
+    next();
+  },
+];
+
+module.exports = {
+  validateRegistration,
+  validateLogin,
+  validateElectionDetails,
+};
