@@ -11,7 +11,21 @@ const getActiveElections = async (req, res, next) => {
   try {
     const now = new Date();
 
+    const eligible = await EligibleVoter.find({
+      srn: req.user.srn,
+    }).select("electionId");
+
+    const eligibleElectionIds = eligible.map((e) => e.electionId);
+
+    if (eligibleElectionIds.length === 0) {
+      return successResponse(res, 200, "No active elections", {
+        scheduled: [],
+        ongoing: [],
+      });
+    }
+
     const elections = await Election.find({
+      _id: { $in: eligibleElectionIds },
       status: { $in: ["scheduled", "ongoing"] },
       endTime: { $gt: now },
     }).sort({ startTime: 1 });
