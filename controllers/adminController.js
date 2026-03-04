@@ -586,7 +586,7 @@ const listElections = async (req, res, next) => {
 
     return successResponse(res, 200, "Elections fetched successfully", {
       total: electionsWithCounts.length,
-      election: electionsWithCounts,
+      elections: electionsWithCounts,
     });
   } catch (err) {
     return next(err);
