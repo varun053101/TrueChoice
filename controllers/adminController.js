@@ -604,7 +604,7 @@ const getElectionDetails = async (req, res, next) => {
 
     //load election
     const election = await Election.findById(electionId).select(
-      "title positionName description status startTime endTime publicResults createdBy createdAt",
+      "_id title positionName description status startTime endTime publicResults createdBy createdAt startedAt closedAt",
     );
 
     if (!election) {
@@ -640,12 +640,13 @@ const getElectionDetails = async (req, res, next) => {
         eligibleCount,
       },
 
-      candidate: {
-        name: candidates.displayName,
-        manifesto: candidates.manifesto,
-        photoUrl: candidates.photoUrl,
-        createdAt: candidates.createdAt,
-      },
+      candidates: candidates.map((c) => ({
+        id: c._id,
+        name: c.displayName,
+        manifesto: c.manifesto,
+        photoUrl: c.photoUrl,
+        createdAt: c.createdAt,
+      })),
     };
 
     return successResponse(
