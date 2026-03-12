@@ -663,12 +663,10 @@ const getElectionDetails = async (req, res, next) => {
 // Get Results of the Election
 const getAdminResults = async (req, res, next) => {
   try {
-    const electionId = req.params.electionId;
+    const electionId = new mongoose.Types.ObjectId(req.params.electionId);
 
-    // Get total votes
     const totalVotes = await Vote.countDocuments({ electionId });
 
-    // Aggregate votes per candidate
     const resultsAgg = await Vote.aggregate([
       { $match: { electionId } },
       {
@@ -697,7 +695,6 @@ const getAdminResults = async (req, res, next) => {
       },
     ]);
 
-    // Calculate percentages
     const results = resultsAgg.map((r) => ({
       candidateId: r.candidateId,
       displayName: r.displayName,

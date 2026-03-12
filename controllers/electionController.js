@@ -204,38 +204,46 @@ const castVote = async (req, res, next) => {
 // Get Election Results
 const getResults = async (req, res, next) => {
   try {
-    const electionId = req.params.electionId;
+    const electionIdParam = req.params.electionId;
+
+    // Validate ID
+    if (!mongoose.Types.ObjectId.isValid(electionIdParam)) {
+      return errorResponse(res, 400, "Invalid Election ID");
+    }
+
+    const electionId = new mongoose.Types.ObjectId(electionIdParam);
 
     // Load election
     const election = await Election.findById(electionId).select(
-      "title positionName status publicResults",
+      "title positionName status publicResults"
     );
 
     if (!election) {
       return errorResponse(res, 404, "Election Not Found");
     }
 
-    // Only show results when closed or public
+    // Only show results after election closes
     if (election.status !== "closed") {
       return errorResponse(
         res,
         403,
-        "The election is still ongoing. Results will be available after it closes.",
+        "The election is still ongoing. Results will be available after it closes."
       );
     }
 
-    // Only show results when closed or public
-    if (election.publicResults !== true) {
+    // Only show results if admin made them public
+    if (!election.publicResults) {
       return errorResponse(
         res,
         403,
-        "Results are currently being verified by the administrator.",
+        "Results are currently being verified by the administrator."
       );
     }
 
-    // Total votes in this election
+    // Total votes
     const totalVotes = await Vote.countDocuments({ electionId });
 
+    // Aggregate votes
     const resultsAgg = await Vote.aggregate([
       { $match: { electionId } },
       {
@@ -269,9 +277,10 @@ const getResults = async (req, res, next) => {
       candidateId: r.candidateId,
       displayName: r.displayName,
       votes: r.votes,
-      percentage: totalVotes
-        ? Number(((r.votes / totalVotes) * 100).toFixed(2))
-        : 0,
+      percentage:
+        totalVotes === 0
+          ? 0
+          : Number(((r.votes / totalVotes) * 100).toFixed(2)),
     }));
 
     // Determine winners (handles ties)
@@ -293,7 +302,7 @@ const getResults = async (req, res, next) => {
       res,
       200,
       "Results Fetched Successfully",
-      responseData,
+      responseData
     );
   } catch (err) {
     return next(err);
